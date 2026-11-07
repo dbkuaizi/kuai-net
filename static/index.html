@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>KuaiNet</title>
+<script src="/static/theme-init.js"></script>
+<link rel="stylesheet" href="/static/pico.min.css">
+<link rel="stylesheet" href="/static/main.css">
+<script defer src="/static/chart.umd.min.js"></script>
+<script defer src="/static/lang.js"></script>
+<script defer src="/static/main.js"></script>
+<script defer src="/static/alpine.min.js"></script>
+</head>
+<body>
+<main x-data="speedTest()" x-cloak>
+
+  <header>
+    <h1 x-text="L.title"></h1>
+    <div class="topbar">
+      <button class="icon-btn" @click="toggleView()"
+              :title="tab === 'test' ? L.jumpHistory : L.backToTest"
+              :aria-label="tab === 'test' ? L.jumpHistory : L.backToTest">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <g x-show="tab === 'test'">
+            <circle cx="12" cy="12" r="8.5"/>
+            <path d="M12 7v5.2l3.4 2"/>
+          </g>
+          <g x-show="tab === 'history'">
+            <path d="M4.6 16.4a7.9 7.9 0 1 1 14.8 0"/>
+            <path d="M12 15l3.8-5.2"/>
+            <circle cx="12" cy="15" r="1.2"/>
+          </g>
+        </svg>
+      </button>
+
+      <button class="icon-btn" @click="toggleTheme()" :title="themeTitle" :aria-label="themeTitle">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <g x-show="theme === 'light'">
+            <circle cx="12" cy="12" r="4.2"/>
+            <path d="M12 2.6v2.2M12 19.2v2.2M2.6 12h2.2M19.2 12h2.2M5.6 5.6l1.6 1.6M16.8 16.8l1.6 1.6M18.4 5.6l-1.6 1.6M7.2 16.8l-1.6 1.6"/>
+          </g>
+          <path x-show="theme === 'dark'" d="M20.2 14.6A8.6 8.6 0 1 1 9.4 3.8a7 7 0 0 0 10.8 10.8z"/>
+          <g x-show="theme === 'auto'">
+            <rect x="3" y="4.6" width="18" height="12.4" rx="2.2"/>
+            <path d="M9 20.6h6M12 17v3.6"/>
+          </g>
+        </svg>
+      </button>
+
+      <div class="lang-menu" x-data="{ open: false }" @click.outside="open = false" @keydown.escape.window="open = false">
+        <button class="icon-btn" @click="open = !open"
+                :title="L.toggleLang" :aria-label="L.toggleLang"
+                aria-haspopup="menu" :aria-expanded="open ? 'true' : 'false'">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="8.6"/>
+            <path d="M3.4 12h17.2M12 3.4c2.5 2.4 3.8 5.4 3.8 8.6S14.5 18.2 12 20.6c-2.5-2.4-3.8-5.4-3.8-8.6S9.5 5.8 12 3.4z"/>
+          </svg>
+        </button>
+        <ul class="lang-list" role="menu" x-show="open" x-transition.opacity.duration.120ms x-cloak>
+          <template x-for="opt in LANGUAGES" :key="opt.code">
+            <li role="none">
+              <button type="button" role="menuitem" class="lang-item"
+                      :class="{ active: lang === opt.code }"
+                      :lang="opt.code"
+                      @click="lang = opt.code; open = false; saveLang()">
+                <span class="lang-native" x-text="opt.native"></span>
+                <svg class="lang-check" viewBox="0 0 24 24" aria-hidden="true" x-show="lang === opt.code">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+              </button>
+            </li>
+          </template>
+        </ul>
+      </div>
+    </div>
+  </header>
+
+  <section class="card dashboard" x-show="tab === 'test'">
+      <div class="gauge" :class="'phase-' + phase">
+        <div class="gauge-dial">
+          <svg viewBox="0 0 300 210" role="img" :aria-label="L.title">
+            <defs>
+              <linearGradient id="grad-download" x1="0" y1="1" x2="1" y2="0">
+                <stop offset="0%" stop-color="#1f9e74"/>
+                <stop offset="55%" stop-color="#36d399"/>
+                <stop offset="100%" stop-color="#7cf3c8"/>
+              </linearGradient>
+              <linearGradient id="grad-upload" x1="0" y1="1" x2="1" y2="0">
+                <stop offset="0%" stop-color="#2f6fb8"/>
+                <stop offset="55%" stop-color="#7cc4ff"/>
+                <stop offset="100%" stop-color="#b3dcff"/>
+              </linearGradient>
+              <linearGradient id="grad-latency" x1="0" y1="1" x2="1" y2="0">
+                <stop offset="0%" stop-color="#b8860b"/>
+                <stop offset="55%" stop-color="#f6c453"/>
+                <stop offset="100%" stop-color="#ffe08a"/>
+              </linearGradient>
+            </defs>
+
+            <path class="track" d="M59.1 192.5 A105 105 0 1 1 240.9 192.5"/>
+            <path class="progress" :style="'stroke: url(#grad-' + phase + '); stroke-dashoffset: ' + dashOffset" d="M59.1 192.5 A105 105 0 1 1 240.9 192.5" :visibility="speed > 0 ? 'visible' : 'hidden'"/>
+
+            <g class="scale">
+              <text :x="ticks[0]?.x" :y="ticks[0]?.y" x-text="ticks[0]?.label"></text>
+              <text :x="ticks[1]?.x" :y="ticks[1]?.y" x-text="ticks[1]?.label"></text>
+              <text :x="ticks[2]?.x" :y="ticks[2]?.y" x-text="ticks[2]?.label"></text>
+              <text :x="ticks[3]?.x" :y="ticks[3]?.y" x-text="ticks[3]?.label"></text>
+              <text :x="ticks[4]?.x" :y="ticks[4]?.y" x-text="ticks[4]?.label"></text>
+              <text x-show="ticks.length > 5" :x="ticks[5]?.x" :y="ticks[5]?.y" x-text="ticks[5]?.label"></text>
+            </g>
+          </svg>
+
+          <button class="dial-btn" :class="{ stop: running }" :disabled="!running &amp;&amp; !canStart"
+                @click.stop="running ? stop() : start()"
+                  :aria-label="running ? L.stopTest : L.startTest"
+                  :title="running ? L.stopTest : L.startTest">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path x-show="!running" d="M8 4.6v14.8l12.8-7.4z"/>
+              <rect x-show="running" x="5.6" y="5.6" width="12.8" height="12.8" rx="2.4"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="readout">
+          <strong :class="readoutSize" x-text="format(speed)"></strong>
+          <div class="readout-meta" :class="'dir-' + phase">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path x-show="phase === 'download'" d="M12 3v13M7 11l5 5 5-5M5 21h14"/>
+              <path x-show="phase === 'upload'" d="M12 21V8M7 13l5-5 5 5M5 3h14"/>
+              <g x-show="phase === 'latency'">
+                <circle cx="12" cy="12" r="8.5"/>
+                <path d="M12 7.5V12l3 2"/>
+              </g>
+            </svg>
+            <span class="unit" x-text="phase === 'latency' ? 'ms' : unit"></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="config">
+        <div class="opt">
+          <span class="opt-title" x-text="L.testItems"></span>
+          <div class="opt-list">
+            <label><input type="checkbox" x-model="types.latency" :disabled="running"><span x-text="L.latency"></span></label>
+            <label><input type="checkbox" x-model="types.download" :disabled="running"><span x-text="L.download"></span></label>
+            <label><input type="checkbox" x-model="types.upload" :disabled="running"><span x-text="L.upload"></span></label>
+          </div>
+        </div>
+
+        <div class="opt">
+          <span class="opt-title" x-text="L.testMode"></span>
+          <div class="opt-list">
+            <label><input type="radio" name="threads" value="single" x-model="threads" :disabled="running"><span x-text="L.singleThread"></span></label>
+            <label><input type="radio" name="threads" value="multi" x-model="threads" :disabled="running"><span x-text="L.multiThread"></span></label>
+          </div>
+        </div>
+
+        <div class="opt">
+          <span class="opt-title" x-text="L.unit"></span>
+          <div class="opt-list">
+            <label><input type="radio" name="unit" value="Mbps" x-model="unit" @change="onUnitChange()" :disabled="running"><span>Mbps</span></label>
+            <label><input type="radio" name="unit" value="MB/s" x-model="unit" @change="onUnitChange()" :disabled="running"><span>MB/s</span></label>
+            <label><input type="radio" name="unit" value="KB/s" x-model="unit" @change="onUnitChange()" :disabled="running"><span>KB/s</span></label>
+          </div>
+        </div>
+
+        <div class="opt">
+          <span class="opt-title" x-text="L.spec"></span>
+          <div class="opt-list">
+            <label><input type="radio" name="spec" value="10s" x-model="runSpec" :disabled="running"><span x-text="L.spec10s"></span></label>
+            <label><input type="radio" name="spec" value="15s" x-model="runSpec" :disabled="running"><span x-text="L.spec15s"></span></label>
+            <label><input type="radio" name="spec" value="30s" x-model="runSpec" :disabled="running"><span x-text="L.spec30s"></span></label>
+          </div>
+        </div>
+      </div>
+
+      <div class="results">
+        <div class="result-tabs">
+          <button :class="{ active: resultTab === 'overview' }" @click="resultTab = 'overview'" x-text="L.overview"></button>
+          <button :class="{ active: resultTab === 'latency' }" @click="resultTab = 'latency'" x-text="L.latency"></button>
+          <button :class="{ active: resultTab === 'download' }" @click="resultTab = 'download'" x-text="L.download"></button>
+          <button :class="{ active: resultTab === 'upload' }" @click="resultTab = 'upload'" x-text="L.upload"></button>
+        </div>
+
+        <div class="result-grid" x-show="resultTab === 'overview'">
+          <div class="stat"><span x-text="L.latency"></span><b x-text="latency ? format(latency.avg) : '—'"></b><small x-show="latency">ms</small></div>
+          <div class="stat"><span x-text="L.jitter"></span><b x-text="latency ? format(latency.jitter) : '—'"></b><small x-show="latency">ms</small></div>
+          <div class="stat"><span x-text="L.avgUpload"></span><b x-text="upload ? format(toUnit(upload.speedMbps)) : '—'"></b><small x-show="upload" x-text="unit"></small></div>
+          <div class="stat"><span x-text="L.avgDownload"></span><b x-text="download ? format(toUnit(download.speedMbps)) : '—'"></b><small x-show="download" x-text="unit"></small></div>
+          <div class="stat"><span x-text="L.totalData"></span><b x-text="totalBytes ? formatBytes(totalBytes) : '—'"></b></div>
+        </div>
+
+        <div class="result-grid" x-show="resultTab === 'latency'">
+          <div class="stat"><span x-text="L.avgLatency"></span><b x-text="latency ? format(latency.avg) : '—'"></b><small x-show="latency">ms</small></div>
+          <div class="stat"><span x-text="L.min"></span><b x-text="latency ? format(latency.min) : '—'"></b><small x-show="latency">ms</small></div>
+          <div class="stat"><span x-text="L.max"></span><b x-text="latency ? format(latency.max) : '—'"></b><small x-show="latency">ms</small></div>
+          <div class="stat"><span x-text="L.jitter"></span><b x-text="latency ? format(latency.jitter) : '—'"></b><small x-show="latency">ms</small></div>
+          <div class="stat"><span x-text="L.samples"></span><b x-text="latency ? latency.samples : '—'"></b></div>
+        </div>
+
+        <div class="result-grid" x-show="resultTab === 'download'">
+          <div class="stat"><span x-text="L.avgSpeed"></span><b x-text="download ? format(toUnit(download.speedMbps)) : '—'"></b><small x-show="download" x-text="unit"></small></div>
+          <div class="stat"><span x-text="L.peakSpeed"></span><b x-text="download ? format(toUnit(download.peakMbps)) : '—'"></b><small x-show="download" x-text="unit"></small></div>
+          <div class="stat"><span x-text="L.transferred"></span><b x-text="download ? formatBytes(download.bytes) : '—'"></b></div>
+          <div class="stat"><span x-text="L.duration"></span><b x-text="download ? download.seconds.toFixed(2) : '—'"></b><small x-show="download" x-text="L.seconds"></small></div>
+          <div class="stat"><span x-text="L.connections"></span><b x-text="download ? download.connections : '—'"></b></div>
+        </div>
+
+        <div class="result-grid" x-show="resultTab === 'upload'">
+          <div class="stat"><span x-text="L.avgSpeed"></span><b x-text="upload ? format(toUnit(upload.speedMbps)) : '—'"></b><small x-show="upload" x-text="unit"></small></div>
+          <div class="stat"><span x-text="L.peakSpeed"></span><b x-text="upload ? format(toUnit(upload.peakMbps)) : '—'"></b><small x-show="upload" x-text="unit"></small></div>
+          <div class="stat"><span x-text="L.transferred"></span><b x-text="upload ? formatBytes(upload.bytes) : '—'"></b></div>
+          <div class="stat"><span x-text="L.duration"></span><b x-text="upload ? upload.seconds.toFixed(2) : '—'"></b><small x-show="upload" x-text="L.seconds"></small></div>
+          <div class="stat"><span x-text="L.connections"></span><b x-text="upload ? upload.connections : '—'"></b></div>
+        </div>
+      </div>
+
+      <div class="chart-box">
+        <div class="chart-empty" x-show="!downloadPoints.length &amp;&amp; !uploadPoints.length" x-text="L.emptyChart"></div>
+        <canvas id="speed-chart"></canvas>
+      </div>
+
+      <p class="hint" x-show="message" x-text="message" x-cloak></p>
+  </section>
+
+  <section class="card history" id="history" x-show="tab === 'history'">
+    <div class="history-toolbar">
+      <div>
+        <span class="history-title" x-text="L.historyTitle"></span>
+        <span class="history-count" x-text="history.length ? history.length + ' ' + L.records : L.emptyShort"></span>
+      </div>
+      <div class="actions">
+        <button @click="exportHistory()" :disabled="!history.length" x-text="L.exportJson"></button>
+        <button class="danger" @click="clearHistory()" :disabled="!history.length" x-text="L.clear"></button>
+      </div>
+    </div>
+    <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th x-text="L.colTime"></th>
+              <th x-text="L.colType"></th>
+              <th x-text="L.colLatency"></th>
+              <th x-text="L.colDownload"></th>
+              <th x-text="L.colUpload"></th>
+              <th x-text="L.colVolume"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="item in history" :key="item.id">
+              <tr>
+                <td x-text="item.time"></td>
+                <td x-text="typeLabel(item)"></td>
+                <td x-text="latencyCell(item)"></td>
+                <td x-text="speedText(downloadCell(item), item.unit)"></td>
+                <td x-text="speedText(uploadCell(item), item.unit)"></td>
+                <td x-text="volume(item)"></td>
+              </tr>
+            </template>
+            <tr x-show="!history.length">
+              <td colspan="6" class="empty" x-text="L.emptyHistory"></td>
+            </tr>
+          </tbody>
+        </table>
+    </div>
+  </section>
+
+  <footer class="site-footer">
+    <span x-text="L.creditAuthor"></span>：<a href="https://www.dbkuaizi.com" target="_blank" rel="noopener noreferrer">两双筷子</a>
+    <span class="sep">·</span>
+    <a href="https://github.com/dbkuaizi/kuai-net" target="_blank" rel="noopener noreferrer">GitHub</a>
+    <span class="sep">·</span>
+    <a href="https://cnb.cool/dbkuaizi/kuai-net" target="_blank" rel="noopener noreferrer">CNB</a>
+    <span class="sep">·</span>
+    <a href="https://opensource.org/license/mit" target="_blank" rel="noopener noreferrer">License MIT</a>
+  </footer>
+
+</main>
+</body>
+</html>
