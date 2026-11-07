@@ -46,9 +46,10 @@
 下载对应平台的可执行文件，运行即可：
 
 ```bash
-./netest
+./kuai-net
 ```
 
+Windows 下双击 `kuai-net.exe` 即可。启动后终端会输出监听地址，
 浏览器打开 `http://服务器IP:8080`。
 
 可选参数：
@@ -61,7 +62,7 @@
 
 ```bash
 # 示例：监听 9000 端口，单次最长 30 秒
-./netest -addr :9000 -max-duration 30
+./kuai-net -addr :9000 -max-duration 30
 ```
 
 ---
