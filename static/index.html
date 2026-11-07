@@ -186,8 +186,8 @@
         <div class="result-grid" x-show="resultTab === 'overview'">
           <div class="stat"><span x-text="L.latency"></span><b x-text="latency ? format(latency.avg) : '—'"></b><small x-show="latency">ms</small></div>
           <div class="stat"><span x-text="L.jitter"></span><b x-text="latency ? format(latency.jitter) : '—'"></b><small x-show="latency">ms</small></div>
-          <div class="stat"><span x-text="L.avgUpload"></span><b x-text="upload ? format(toUnit(upload.speedMbps)) : '—'"></b><small x-show="upload" x-text="unit"></small></div>
-          <div class="stat"><span x-text="L.avgDownload"></span><b x-text="download ? format(toUnit(download.speedMbps)) : '—'"></b><small x-show="download" x-text="unit"></small></div>
+          <div class="stat"><span x-text="L.avgUpload"></span><b x-text="upload ? formatStat(toUnit(upload.speedMbps)) : '—'"></b><small x-show="upload" x-text="unit"></small></div>
+          <div class="stat"><span x-text="L.avgDownload"></span><b x-text="download ? formatStat(toUnit(download.speedMbps)) : '—'"></b><small x-show="download" x-text="unit"></small></div>
           <div class="stat"><span x-text="L.totalData"></span><b x-text="totalBytes ? formatBytes(totalBytes) : '—'"></b></div>
         </div>
 
@@ -200,16 +200,16 @@
         </div>
 
         <div class="result-grid" x-show="resultTab === 'download'">
-          <div class="stat"><span x-text="L.avgSpeed"></span><b x-text="download ? format(toUnit(download.speedMbps)) : '—'"></b><small x-show="download" x-text="unit"></small></div>
-          <div class="stat"><span x-text="L.peakSpeed"></span><b x-text="download ? format(toUnit(download.peakMbps)) : '—'"></b><small x-show="download" x-text="unit"></small></div>
+          <div class="stat"><span x-text="L.avgSpeed"></span><b x-text="download ? formatStat(toUnit(download.speedMbps)) : '—'"></b><small x-show="download" x-text="unit"></small></div>
+          <div class="stat"><span x-text="L.peakSpeed"></span><b x-text="download ? formatStat(toUnit(download.peakMbps)) : '—'"></b><small x-show="download" x-text="unit"></small></div>
           <div class="stat"><span x-text="L.transferred"></span><b x-text="download ? formatBytes(download.bytes) : '—'"></b></div>
           <div class="stat"><span x-text="L.duration"></span><b x-text="download ? download.seconds.toFixed(2) : '—'"></b><small x-show="download" x-text="L.seconds"></small></div>
           <div class="stat"><span x-text="L.connections"></span><b x-text="download ? download.connections : '—'"></b></div>
         </div>
 
         <div class="result-grid" x-show="resultTab === 'upload'">
-          <div class="stat"><span x-text="L.avgSpeed"></span><b x-text="upload ? format(toUnit(upload.speedMbps)) : '—'"></b><small x-show="upload" x-text="unit"></small></div>
-          <div class="stat"><span x-text="L.peakSpeed"></span><b x-text="upload ? format(toUnit(upload.peakMbps)) : '—'"></b><small x-show="upload" x-text="unit"></small></div>
+          <div class="stat"><span x-text="L.avgSpeed"></span><b x-text="upload ? formatStat(toUnit(upload.speedMbps)) : '—'"></b><small x-show="upload" x-text="unit"></small></div>
+          <div class="stat"><span x-text="L.peakSpeed"></span><b x-text="upload ? formatStat(toUnit(upload.peakMbps)) : '—'"></b><small x-show="upload" x-text="unit"></small></div>
           <div class="stat"><span x-text="L.transferred"></span><b x-text="upload ? formatBytes(upload.bytes) : '—'"></b></div>
           <div class="stat"><span x-text="L.duration"></span><b x-text="upload ? upload.seconds.toFixed(2) : '—'"></b><small x-show="upload" x-text="L.seconds"></small></div>
           <div class="stat"><span x-text="L.connections"></span><b x-text="upload ? upload.connections : '—'"></b></div>

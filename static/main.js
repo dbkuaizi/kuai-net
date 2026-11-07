@@ -163,10 +163,19 @@ function speedTest() {
       return this.L.statusIdle;
     },
 
-    // 表盘量程按当前峰值自动升档：<1000 → 1000；1000~2500 → 2500；>2500 → 10000
+    // 表盘量程按当前单位下的峰值自动升档。
+    // 内部数据始终是 Mbps，这里换成当前单位再选档，避免切到 MB/s 后量程还是 1k（相当于 8 Gbps）。
     get gaugeTier() {
       if (this.phase === 'latency') return { max: 200, segments: 4 };
       const peak = this.toUnit(this.peakMbps);
+      // MB/s、KB/s 的档位与 Mbps 一一对应，只是数值除以 8（KB/s 再乘 1024）
+      if (this.unit === 'MB/s' || this.unit === 'KB/s') {
+        const scale = this.unit === 'MB/s' ? 1 / 8 : 128;
+        const tier = peak <= 1000 * scale ? [1000, 4]
+          : peak <= 2500 * scale ? [2500, 5]
+          : [10000, 5];
+        return { max: tier[0] * scale, segments: tier[1] };
+      }
       if (peak <= 1000) return { max: 1000, segments: 4 };
       if (peak <= 2500) return { max: 2500, segments: 5 };
       return { max: 10000, segments: 5 };
@@ -250,6 +259,16 @@ function speedTest() {
       return Number(v || 0).toFixed(2);
     },
 
+    // 结果卡片里的速度：千位以上用 K 缩写，避免把卡片撑宽
+    formatStat(v) {
+      const n = Number(v || 0);
+      const abs = Math.abs(n);
+      if (abs >= 1e9) return (n / 1e9).toFixed(2) + 'G';
+      if (abs >= 1e6) return (n / 1e6).toFixed(2) + 'M';
+      if (abs >= 1e4) return (n / 1e3).toFixed(1) + 'K';
+      return n.toFixed(2);
+    },
+
     formatBytes(n) {
       n = Number(n || 0);
       if (!n) return '0 B';
@@ -259,10 +278,8 @@ function speedTest() {
     },
 
     formatTick(v) {
-      if (v >= 1000) {
-        const k = v / 1000;
-        return (k % 1 === 0 ? k.toFixed(0) : k.toFixed(1)) + 'k';
-      }
+      // 千位以上用 K 后缀；其余最多保留 1 位小数（如 312.5、62.5），整数直接输出
+      if (v >= 1000) return (v / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
       return v % 1 === 0 ? String(v) : v.toFixed(1);
     },
 
@@ -903,7 +920,7 @@ function speedTest() {
 
     speedText(mbps, unit) {
       if (mbps === null || mbps === undefined) return '—';
-      return mbps.toFixed(2) + ' ' + (unit || 'Mbps');
+      return this.formatStat(mbps) + ' ' + (unit || 'Mbps');
     },
 
     volume(item) {
