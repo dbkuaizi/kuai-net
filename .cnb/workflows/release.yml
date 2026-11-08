@@ -20,7 +20,7 @@ $:
           script: sh .cnb/scripts/release-notes.sh
 
         - name: build all targets
-          image: golang:1.24-alpine
+          image: golang:1.26-alpine
           script: sh .cnb/scripts/release-build.sh
 
         - name: verify artifacts
