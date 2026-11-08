@@ -1,11 +1,11 @@
 # 推送 tag（如 v1.0.0）后自动构建三平台产物并发布 Release。
 #
 # 流程：
-#   1. 单次构建 linux/amd64、linux/arm64、windows/amd64、darwin/amd64、darwin/arm64
+#   1. 构建 linux/amd64、linux/arm64、windows/amd64、darwin/amd64、darwin/arm64
 #   2. CNB 侧创建 Release 并上传附件（主发布渠道）
 #   3. 同步创建 GitHub Release 并上传同一批产物（GitHub 不单独构建）
 #
-# 产物均为静态链接的终端程序，解压即可运行。
+# 产物统一打包为 tar.gz，均可在对应平台上解压直接运行。
 $:
   tag_push:
     - runner:
@@ -23,6 +23,10 @@ $:
           image: golang:1.25-alpine
           script: sh .cnb/scripts/release-build.sh
 
+        - name: verify artifacts
+          image: alpine:3.20
+          script: sh .cnb/scripts/verify-artifacts.sh
+
         - name: create cnb release
           type: git:release
           options:
@@ -36,7 +40,7 @@ $:
             attachments:
               - release/kuai-net-linux-amd64.tar.gz
               - release/kuai-net-linux-arm64.tar.gz
-              - release/kuai-net-windows-amd64.zip
+              - release/kuai-net-windows-amd64.tar.gz
               - release/kuai-net-darwin-amd64.tar.gz
               - release/kuai-net-darwin-arm64.tar.gz
               - release/SHA256SUMS.txt
@@ -56,7 +60,7 @@ $:
             sh .cnb/scripts/github-upload.sh \
               release/kuai-net-linux-amd64.tar.gz \
               release/kuai-net-linux-arm64.tar.gz \
-              release/kuai-net-windows-amd64.zip \
+              release/kuai-net-windows-amd64.tar.gz \
               release/kuai-net-darwin-amd64.tar.gz \
               release/kuai-net-darwin-arm64.tar.gz \
               release/SHA256SUMS.txt

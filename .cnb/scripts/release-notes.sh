@@ -20,7 +20,7 @@ mkdir -p release
   printf '|---|---|\n'
   printf '%s\n' '| Linux x64 | `kuai-net-linux-amd64.tar.gz` |'
   printf '%s\n' '| Linux ARM64 | `kuai-net-linux-arm64.tar.gz` |'
-  printf '%s\n' '| Windows x64 | `kuai-net-windows-amd64.zip` |'
+  printf '%s\n' '| Windows x64 | `kuai-net-windows-amd64.tar.gz` |'
   printf '%s\n' '| macOS Intel | `kuai-net-darwin-amd64.tar.gz` |'
   printf '%s\n\n' '| macOS Apple 芯片 | `kuai-net-darwin-arm64.tar.gz` |'
 
