@@ -1,0 +1,67 @@
+# 推送 tag（如 v1.0.0）后自动构建三平台产物并发布 Release。
+#
+# 流程：
+#   1. 单次构建 linux/amd64、linux/arm64、windows/amd64、darwin/amd64、darwin/arm64
+#   2. CNB 侧创建 Release 并上传附件（主发布渠道）
+#   3. 同步创建 GitHub Release 并上传同一批产物（GitHub 不单独构建）
+#
+# 产物均为静态链接的终端程序，解压即可运行。
+$:
+  tag_push:
+    - runner:
+        tags: cnb:arch:amd64
+        cpus: 4
+      services:
+        - docker
+        - git-clone-yyds
+      stages:
+        - name: prepare release notes
+          image: alpine:3.20
+          script: sh .cnb/scripts/release-notes.sh
+
+        - name: build all targets
+          image: golang:1.25-alpine
+          script: sh .cnb/scripts/release-build.sh
+
+        - name: create cnb release
+          type: git:release
+          options:
+            title: KuaiNet ${CNB_BRANCH}
+            descriptionFromFile: release/RELEASE_NOTES.md
+            latest: true
+
+        - name: upload attachments
+          image: cnbcool/attachments:latest
+          settings:
+            attachments:
+              - release/kuai-net-linux-amd64.tar.gz
+              - release/kuai-net-linux-arm64.tar.gz
+              - release/kuai-net-windows-amd64.zip
+              - release/kuai-net-darwin-amd64.tar.gz
+              - release/kuai-net-darwin-arm64.tar.gz
+              - release/SHA256SUMS.txt
+
+        - name: create github release
+          image: alpine:3.20
+          imports: https://cnb.cool/dbkuaizi/safe-env/-/blob/main/git/github.yml
+          script: |
+            apk add --no-cache curl git jq
+            sh .cnb/scripts/github-release.sh
+
+        - name: upload to github release
+          image: alpine:3.20
+          imports: https://cnb.cool/dbkuaizi/safe-env/-/blob/main/git/github.yml
+          script: |
+            apk add --no-cache curl jq
+            sh .cnb/scripts/github-upload.sh \
+              release/kuai-net-linux-amd64.tar.gz \
+              release/kuai-net-linux-arm64.tar.gz \
+              release/kuai-net-windows-amd64.zip \
+              release/kuai-net-darwin-amd64.tar.gz \
+              release/kuai-net-darwin-arm64.tar.gz \
+              release/SHA256SUMS.txt
+
+        - name: release ready
+          type: cnb:resolve
+          options:
+            key: kuai-net-release-ready

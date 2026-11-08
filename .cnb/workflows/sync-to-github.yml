@@ -1,0 +1,28 @@
+# 推送到 CNB 后，自动把代码同步一份到 GitHub 仓库。
+#
+# 前提：
+#   1. 已在 CNB 的「安全环境 / 密钥仓库」里配置好 GIT_USERNAME 与 GIT_ACCESS_TOKEN
+#      （下面 imports 引用的就是这份，与其它项目共用同一套配置）
+#   2. GitHub 侧已建好空仓库，且 token 有 contents:write 权限
+#
+# 说明：
+#   - 只在 main 分支的 push 时触发，避免 PR / 其他分支也去推 GitHub
+#   - 同步是单向的（CNB → GitHub），不要在 GitHub 侧直接改代码，否则会被覆盖
+main:
+  push:
+    - runner:
+        cpus: 2
+      services:
+        - docker
+        - git-clone-yyds
+      stages:
+        - name: sync to github
+          image: tencentcom/git-sync
+          imports: https://cnb.cool/dbkuaizi/safe-env/-/blob/main/git/github.yml
+          settings:
+            branch: main
+            auth_type: https
+            username: ${GIT_USERNAME}
+            password: ${GIT_ACCESS_TOKEN}
+            target_url: https://github.com/dbkuaizi/kuai-net.git
+            git_email: github-actions[bot]@users.noreply.github.com
