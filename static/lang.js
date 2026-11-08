@@ -6,9 +6,9 @@
    ============================================================ */
 
 const LANGUAGES = [
-  { code: 'en', native: 'English', html: 'en' },
   { code: 'zh', native: '简体中文', html: 'zh-CN' },
   { code: 'zh-Hant', native: '繁體中文', html: 'zh-Hant' },
+  { code: 'en', native: 'English', html: 'en' },
   { code: 'ja', native: '日本語', html: 'ja' },
   { code: 'ko', native: '한국어', html: 'ko' },
   { code: 'de', native: 'Deutsch', html: 'de' },

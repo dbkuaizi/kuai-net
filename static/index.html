@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="/static/main.css">
 <script defer src="/static/chart.umd.min.js"></script>
 <script defer src="/static/lang.js"></script>
+<script defer src="/static/profile.js"></script>
 <script defer src="/static/main.js"></script>
 <script defer src="/static/alpine.min.js"></script>
 </head>
@@ -142,35 +143,35 @@
         <div class="opt">
           <span class="opt-title" x-text="L.testItems"></span>
           <div class="opt-list">
-            <label><input type="checkbox" x-model="types.latency" :disabled="running"><span x-text="L.latency"></span></label>
-            <label><input type="checkbox" x-model="types.download" :disabled="running"><span x-text="L.download"></span></label>
-            <label><input type="checkbox" x-model="types.upload" :disabled="running"><span x-text="L.upload"></span></label>
+            <label><input type="checkbox" x-model="types.latency" @change="saveUi()" :disabled="running"><span x-text="L.latency"></span></label>
+            <label><input type="checkbox" x-model="types.download" @change="saveUi()" :disabled="running"><span x-text="L.download"></span></label>
+            <label><input type="checkbox" x-model="types.upload" @change="saveUi()" :disabled="running"><span x-text="L.upload"></span></label>
           </div>
         </div>
 
         <div class="opt">
           <span class="opt-title" x-text="L.testMode"></span>
           <div class="opt-list">
-            <label><input type="radio" name="threads" value="single" x-model="threads" :disabled="running"><span x-text="L.singleThread"></span></label>
-            <label><input type="radio" name="threads" value="multi" x-model="threads" :disabled="running"><span x-text="L.multiThread"></span></label>
+            <label><input type="radio" name="threads" value="single" x-model="threads" @change="saveUi()" :disabled="running"><span x-text="L.singleThread"></span></label>
+            <label><input type="radio" name="threads" value="multi" x-model="threads" @change="saveUi()" :disabled="running"><span x-text="L.multiThread"></span></label>
           </div>
         </div>
 
         <div class="opt">
           <span class="opt-title" x-text="L.unit"></span>
           <div class="opt-list">
-            <label><input type="radio" name="unit" value="Mbps" x-model="unit" @change="onUnitChange()" :disabled="running"><span>Mbps</span></label>
-            <label><input type="radio" name="unit" value="MB/s" x-model="unit" @change="onUnitChange()" :disabled="running"><span>MB/s</span></label>
-            <label><input type="radio" name="unit" value="KB/s" x-model="unit" @change="onUnitChange()" :disabled="running"><span>KB/s</span></label>
+            <label><input type="radio" name="unit" value="Mbps" x-model="unit" @change="onUnitChange(); saveUi()" :disabled="running"><span>Mbps</span></label>
+            <label><input type="radio" name="unit" value="MB/s" x-model="unit" @change="onUnitChange(); saveUi()" :disabled="running"><span>MB/s</span></label>
+            <label><input type="radio" name="unit" value="KB/s" x-model="unit" @change="onUnitChange(); saveUi()" :disabled="running"><span>KB/s</span></label>
           </div>
         </div>
 
         <div class="opt">
           <span class="opt-title" x-text="L.spec"></span>
           <div class="opt-list">
-            <label><input type="radio" name="spec" value="10s" x-model="runSpec" :disabled="running"><span x-text="L.spec10s"></span></label>
-            <label><input type="radio" name="spec" value="15s" x-model="runSpec" :disabled="running"><span x-text="L.spec15s"></span></label>
-            <label><input type="radio" name="spec" value="30s" x-model="runSpec" :disabled="running"><span x-text="L.spec30s"></span></label>
+            <label><input type="radio" name="spec" value="10s" x-model="runSpec" @change="saveUi()" :disabled="running"><span x-text="L.spec10s"></span></label>
+            <label><input type="radio" name="spec" value="15s" x-model="runSpec" @change="saveUi()" :disabled="running"><span x-text="L.spec15s"></span></label>
+            <label><input type="radio" name="spec" value="30s" x-model="runSpec" @change="saveUi()" :disabled="running"><span x-text="L.spec30s"></span></label>
           </div>
         </div>
       </div>

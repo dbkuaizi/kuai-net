@@ -1,4 +1,9 @@
 const MULTI_THREADS = 4;
+// 界面配置的存储键与合法取值（读取时用于校验，防止脏数据）
+const UI_KEY = 'netest-ui';
+const UNITS = ['Mbps', 'MB/s', 'KB/s'];
+const THREAD_MODES = ['single', 'multi'];
+const SPECS = ['10s', '15s', '30s'];
 const UPLOAD_CHUNK = 1024 * 1024;
 
 // Chart 实例不能放进 Alpine 的响应式数据里，否则其内部循环引用会被代理包裹导致栈溢出。
@@ -41,6 +46,9 @@ function speedTest() {
     download: null,
     upload: null,
 
+    /* ---------- 布局 ---------- */
+    cardBaseHeight: 0,       // 测速卡片的自然高度（布局基准，见 measureCards）
+
     /* ---------- 曲线 ---------- */
     downloadPoints: [],
     uploadPoints: [],
@@ -75,18 +83,7 @@ function speedTest() {
       } catch (e) {
         this.history = [];
       }
-      try {
-        const ui = JSON.parse(localStorage.getItem('netest-ui') || '{}');
-        if (ui.tab === 'test' || ui.tab === 'history') this.tab = ui.tab;
-        if (ui.threads === 'single' || ui.threads === 'multi') this.threads = ui.threads;
-        if (ui.types && typeof ui.types === 'object') {
-          this.types = {
-            latency: ui.types.latency !== false,
-            download: ui.types.download !== false,
-            upload: ui.types.upload !== false
-          };
-        }
-      } catch (e) { /* 忽略 */ }
+      this.loadUi();
 
       this.initChart();
       this.applyChartTheme();
@@ -291,32 +288,121 @@ function speedTest() {
       if (tab === 'test') this.resizeChartSoon();
     },
 
-    saveUi() {
+    /**
+     * 读取上次的界面配置（视图 / 测速项目 / 线程 / 单位 / 时长）。
+     * 每一项都做取值校验：localStorage 可能被旧版本写坏或手工改过，
+     * 只接受合法值，其余保持默认，避免出现"选中了不存在的选项"。
+     */
+    loadUi() {
+      let ui = {};
       try {
-        localStorage.setItem('netest-ui', JSON.stringify({ tab: this.tab, types: this.types, threads: this.threads }));
-      } catch (e) { /* 忽略 */ }
+        ui = JSON.parse(localStorage.getItem(UI_KEY) || '{}') || {};
+      } catch (e) {
+        ui = {};
+      }
+
+      if (ui.tab === 'test' || ui.tab === 'history') this.tab = ui.tab;
+
+      if (ui.types && typeof ui.types === 'object') {
+        const t = {
+          latency: ui.types.latency !== false,
+          download: ui.types.download !== false,
+          upload: ui.types.upload !== false
+        };
+        // 三项全关等于没得测，回退到默认（三项全开）
+        if (t.latency || t.download || t.upload) this.types = t;
+      }
+
+      if (UNITS.includes(ui.unit)) this.unit = ui.unit;
+      if (THREAD_MODES.includes(ui.threads)) this.threads = ui.threads;
+      if (SPECS.includes(ui.runSpec)) this.runSpec = ui.runSpec;
     },
 
-    // 两张卡片共用同一高度：取自然高度的最大值，切换视图时不会跳动。
-    measureCards() {
-      const dash = document.querySelector('.dashboard');
-      const hist = document.querySelector('.history');
-      if (!dash || !hist) return;
+    /** 保存全部配置项；任何一项变化都要落盘，刷新后不再回到默认值。 */
+    saveUi() {
+      try {
+        localStorage.setItem(UI_KEY, JSON.stringify({
+          tab: this.tab,
+          types: this.types,
+          threads: this.threads,
+          unit: this.unit,
+          runSpec: this.runSpec
+        }));
+      } catch (e) { /* 隐私模式或配额满，忽略 */ }
+    },
 
+    /**
+     * 两张卡片共用同一高度。
+     *
+     * 基准是**测速卡片**：它由仪表盘/曲线/结果决定，高度是稳定的。
+     * 历史卡片跟随它，表格超出就在卡片内部滚动——不能反过来取两者的最大值，
+     * 否则历史记录一多，表格会把卡片撑到几千像素，整页跟着变长。
+     *
+     * 高度基准来自测速视图下的实测值（缓存起来）：
+     * 历史视图里测速卡片是 display:none，量不准；离屏克隆又会因为脱离原布局
+     * 而偏大几像素。所以只在测速视图下量，量到后记住，切到历史视图时直接用。
+     */
+    measureCards() {
       const apply = () => {
         const d = document.querySelector('.dashboard');
         const h = document.querySelector('.history');
         if (!d || !h) return;
-        d.style.height = '';
-        h.style.height = '';
-        // 先量自然高度（两张都清零），再统一锁定
-        const max = Math.ceil(Math.max(d.getBoundingClientRect().height, h.getBoundingClientRect().height));
-        d.style.height = max + 'px';
-        h.style.height = max + 'px';
+
+        // 1) 测速卡片可见：直接量它的自然高度并缓存（最准）
+        if (getComputedStyle(d).display !== 'none') {
+          const prev = d.style.height;
+          d.style.height = '';
+          const natural = Math.ceil(d.getBoundingClientRect().height);
+          d.style.height = prev;
+          if (natural) this.cardBaseHeight = natural;
+        }
+
+        // 2) 不可见（例如刷新后直接落在历史页）：用离屏克隆量，宽度取历史卡片的
+        //    实际宽度——两张卡片同属 <main>，宽度一致，克隆出来的布局环境也就一致
+        if (!this.cardBaseHeight) {
+          this.cardBaseHeight = this.measureCardHeightOffscreen(d, h);
+        }
+
+        const base = this.cardBaseHeight;
+        if (!base) return;
+        d.style.height = base + 'px';
+        h.style.height = base + 'px';
       };
 
       // 等一帧，确保 Alpine 已把 x-show 应用到两张卡片上
       requestAnimationFrame(() => requestAnimationFrame(apply));
+    },
+
+    /**
+     * 离屏量测速卡片的自然高度。
+     * 宽度必须显式给成历史卡片的宽度（含 padding，用 border-box），
+     * 否则克隆体按 body 宽度布局，仪表盘那一行会被撑大，量出来偏高十几像素。
+     */
+    measureCardHeightOffscreen(el, reference) {
+      const cs = getComputedStyle(el);
+      const ref = reference.getBoundingClientRect();
+      const width = ref.width || (el.parentElement || document.body).clientWidth;
+      if (!width) return 0;
+
+      const holder = document.createElement('div');
+      holder.style.cssText =
+        'position:absolute;left:-99999px;top:0;width:' + width + 'px;' +
+        'box-sizing:border-box;visibility:hidden;pointer-events:none;';
+
+      const clone = el.cloneNode(true);
+      clone.style.height = 'auto';
+      clone.style.display = cs.display === 'none' ? 'grid' : cs.display;
+      clone.style.boxSizing = 'border-box';
+      clone.style.width = '100%';
+      clone.setAttribute('aria-hidden', 'true');
+
+      holder.appendChild(clone);
+      document.body.appendChild(holder);
+      const height = Math.ceil(clone.getBoundingClientRect().height);
+      document.body.removeChild(holder);
+
+      // 克隆时把 display 改回来了，必须保证原元素不受影响（未改动原节点，天然安全）
+      return height;
     },
 
     // 卡片从 display:none 恢复后需要重新测量画布尺寸
@@ -651,6 +737,8 @@ function speedTest() {
     },
 
     /* ---------- 吞吐 ---------- */
+    // 固定时长测速：一定跑满用户设定的时长，只做"取样 + 平滑 + 掐头去尾"。
+    // 取样与"掐头去尾"的算法见 static/profile.js（纯函数，可单测）。
     async runThroughput(phase) {
       const isDownload = phase === 'download';
       const seconds = this.specMode === 'duration' ? this.specValue : 3600;
@@ -673,40 +761,48 @@ function speedTest() {
       this.renderChart();
 
       const started = performance.now();
-      // 10Hz 采样 + 约 300ms 滑动窗口求速度：既跟得上，又不会锯齿状跳动
-      const window = [];
-      const SAMPLE_MS = 100;
-      const SMOOTH_MS = 300;
+      const profile = new SpeedProfile({ warmupMs: PROFILE_DEFAULTS.warmupMs });
+      const SAMPLE_MS = PROFILE_DEFAULTS.sampleMs;
+      let lastPointX = 0;
+      let lastChartAt = 0;
 
       const reached = () => {
         const spent = (performance.now() - started) / 1000;
         return spent >= seconds || (bytes > 0 && this.transferred >= bytes);
       };
 
+      // 采样节拍：固定 100ms。高带宽下读流回调可能把定时器推迟，
+      // 但下面的速度全部按"采样点之间的真实时间差"算，迟到不会导致速度失真。
       const ticker = setInterval(() => {
         const now = performance.now();
         const elapsed = (now - started) / 1000;
         this.elapsed = elapsed;
 
-        window.push({ t: now, b: this.transferred });
-        while (window.length > 2 && now - window[0].t > SMOOTH_MS) window.shift();
+        // profile.sample 返回的是最近 1.5 秒的移动平均（已平滑），曲线用这个值
+        const smoothMbps = profile.sample(now - started, this.transferred);
+        this.speedMbps = smoothMbps;
 
-        const base = window[0];
-        const dt = (now - base.t) / 1000;
-        if (dt > 0.05) {
-          const mbps = (this.transferred - base.b) * 8 / dt / 1e6;
-          if (mbps >= 0) {
-            this.speedMbps = mbps;
-            this.peakMbps = Math.max(this.peakMbps, mbps);
-            this.pushPoint(bucket, Math.min(elapsed, seconds), mbps);
+        // 曲线按 200ms 打点：100ms 采样足够算速度，但图上 200ms 一点更干净
+        if (now - lastChartAt >= 200 || lastChartAt === 0) {
+          lastChartAt = now;
+          const x = this.specMode === 'duration' ? Math.min(elapsed, seconds) : elapsed;
+          if (x >= lastPointX) {
+            lastPointX = x;
+            this.pushPoint(bucket, x, smoothMbps);
           }
         }
 
+        // 用滑动平均刷新峰值：比逐点瞬时值的最大值更稳（不受单点毛刺影响）。
+        // 预热期跳过：连接刚建立时的突发会冲出一个虚假高峰（回环下能到真实值的 2 倍）
+        if (elapsed * 1000 >= PROFILE_DEFAULTS.warmupMs && smoothMbps > this.peakMbps) {
+          this.peakMbps = smoothMbps;
+        }
+
         if (bytes > 0) {
-          this.progress = this.transferred / bytes;
+          this.progress = Math.min(1, this.transferred / bytes);
           this.progressLabel = this.formatBytes(this.transferred) + ' / ' + this.formatBytes(bytes);
         } else {
-          this.progress = elapsed / seconds;
+          this.progress = Math.min(1, elapsed / seconds);
           this.progressLabel = elapsed.toFixed(1) + ' / ' + seconds + ' ' + this.L.seconds;
         }
       }, SAMPLE_MS);
@@ -724,39 +820,47 @@ function speedTest() {
       }
 
       const stopped = this.stopping;
-      this.elapsed = stopped && this.stopAt > started
-        ? Math.max((this.stopAt - started) / 1000, 0.001)
-        : Math.max((performance.now() - started) / 1000, 0.001);
+      const endMs = stopped && this.stopAt > started
+        ? Math.max(this.stopAt - started, 1)
+        : Math.max(performance.now() - started, 1);
       if (stopped) this.transferred = this.stopBytes;
 
-      const measured = stopped || this.specMode !== 'duration'
-        ? this.elapsed
-        : Math.min(this.elapsed, seconds);
-      const avgMbps = this.transferred * 8 / Math.max(measured, 0.001) / 1e6;
+      this.elapsed = endMs / 1000;
+      // 补最后一个采样点，确保收尾时刻的字节数进入统计
+      profile.sample(endMs, this.transferred);
+
+      // ---- 掐头去尾，算最终结果 ----
+      const r = profile.result(endMs, this.transferred);
+      const avgMbps = r.avgMbps;
+      const peakMbps = Math.max(r.peakMbps, avgMbps);
 
       this.avgMbps = avgMbps;
       this.speedMbps = avgMbps;
-      this.peakMbps = Math.max(this.peakMbps, avgMbps);
+      this.peakMbps = peakMbps;
       this.progress = 1;
 
-      // 极快的测试可能在第一个采样点之前就结束，补一个收尾点（x 必须单调递增）。
-      if (this.transferred) {
-        const lastX = bucket.length ? bucket[bucket.length - 1].x : 0;
-        this.pushPoint(bucket, Math.max(measured, lastX), avgMbps);
+      // 曲线收尾：把最后一段补平滑到结束时刻（x 必须单调递增）
+      if (this.transferred && lastPointX < this.elapsed) {
+        this.pushPoint(bucket, this.elapsed, avgMbps);
       }
 
       const result = {
         speedMbps: avgMbps,
-        peakMbps: this.peakMbps,
+        peakMbps,
         bytes: this.transferred,
-        seconds: +measured.toFixed(2),
-        connections: this.threadCount
+        seconds: +(this.elapsed).toFixed(2),
+        connections: this.threadCount,
+        // 掐头去尾的明细，供结果面板展示
+        measuredSeconds: +(r.measuredMs / 1000).toFixed(2),
+        fromSeconds: +(r.fromMs / 1000).toFixed(2),
+        toSeconds: +(r.toMs / 1000).toFixed(2),
+        measuredBytes: r.usedBytes,
+        steady: !!r.steady,
+        steadyCv: +(r.steadyCv || 0).toFixed(4),
+        stopped
       };
       if (isDownload) this.download = result;
       else this.upload = result;
-
-      if (this.transferred) {
-      }
     },
 
     async downloadWorker(controller, seconds, bytes, reached) {
