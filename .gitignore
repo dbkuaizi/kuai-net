@@ -4,3 +4,7 @@
 /tmp/
 kuai-net
 kuai-net-*
+
+# 构建产物
+dist/
+release/

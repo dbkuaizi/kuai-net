@@ -16,15 +16,16 @@ import (
 var assets embed.FS
 
 var (
-	addr        = flag.String("addr", ":8080", "监听地址")
-	maxDuration = flag.Int("max-duration", 60, "单次测速最大秒数")
-	maxSize     = flag.Int64("max-size", 1<<30, "单次测速最大字节数")
+	addr = flag.String("addr", ":8080", "监听地址")
+	// 与前端时长选项对齐（10/15/30 秒）。这是接口层的安全兜底：
+	// 直接调 API 时可以把 duration 传得很大，靠它裁剪掉。
+	maxDuration = flag.Int("max-duration", 30, "单次测速最大秒数")
 )
 
 func main() {
 	flag.Parse()
-	if *maxDuration < 1 || *maxSize < 1 {
-		log.Fatal("max-duration and max-size must be positive")
+	if *maxDuration < 1 {
+		log.Fatal("max-duration must be positive")
 	}
 	mux := newMux()
 	server := &http.Server{Addr: *addr, Handler: securityHeaders(mux), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 70 * time.Second, WriteTimeout: 70 * time.Second}
@@ -79,9 +80,6 @@ func requested(r *http.Request) (time.Duration, int64) {
 	var size int64
 	if v, err := strconv.ParseInt(r.URL.Query().Get("size"), 10, 64); err == nil && v > 0 {
 		size = v
-		if size > *maxSize {
-			size = *maxSize
-		}
 	}
 	return duration, size
 }
