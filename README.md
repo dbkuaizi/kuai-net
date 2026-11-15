@@ -140,6 +140,14 @@ systemd 常驻、Nginx 反代、防火墙与线上测速注意事项见 [docs/de
 
 同一个可执行文件支持服务端和客户端两种模式。无子命令时启动服务端；`client` 和 `c` 都会打开终端测速界面，适合 SSH、Alpine 和两台服务器之间测速。
 
+<p align="center">
+  <img src="docs/images/tui.png" alt="KuaiNet TUI 终端测速界面：配置表单、半圆仪表盘、下载与上传实时曲线及测速结果" width="100%">
+</p>
+
+<p align="center">
+  <sub>终端客户端：下拉配置表单 + 半圆仪表盘 + 下载/上传实时曲线 + 测速结果</sub>
+</p>
+
 ```bash
 # 机器 A：启动 HTTP 测速服务
 ./kuainet -addr :8080
