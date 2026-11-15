@@ -536,6 +536,7 @@ select { cursor: pointer; }
   text-underline-offset: 2px;
 }
 .site-footer .sep { margin: 0 6px; opacity: .6; }
+.site-footer .site-version { white-space: nowrap; }
 
 /* 历史记录 */
 .actions { display: flex; gap: 7px; }

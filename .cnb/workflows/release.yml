@@ -1,7 +1,7 @@
-# 推送 tag（如 v1.0.0）后自动构建三平台产物并发布 Release。
+# 推送 tag（如 v1.1.0）后构建 Linux / Windows / macOS 并发布 Release。
 #
 # 流程：
-#   1. 构建 linux/amd64、linux/arm64、windows/amd64、darwin/amd64、darwin/arm64
+#   1. 测试并构建五个目标；Linux、Windows 使用 UPX，macOS 保留原文件
 #   2. CNB 侧创建 Release 并上传附件（主发布渠道）
 #   3. 同步创建 GitHub Release 并上传同一批产物（GitHub 不单独构建）
 #
@@ -15,11 +15,18 @@ $:
         - docker
         - git-clone-yyds
       stages:
+        - name: test and vet
+          image: golang:1.26-alpine
+          script: |
+            set -eu
+            CGO_ENABLED=0 go test ./...
+            CGO_ENABLED=0 go vet ./...
+
         - name: prepare release notes
           image: alpine:3.20
           script: sh .cnb/scripts/release-notes.sh
 
-        - name: build all targets
+        - name: build linux windows macos
           image: golang:1.26-alpine
           script: sh .cnb/scripts/release-build.sh
 

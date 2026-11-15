@@ -1,6 +1,6 @@
 # KuaiNet
 
-基于 Go 语言的极简内网服务器测速工具，测量「服务器 ↔ 你的浏览器」之间的下载、上传速度和延迟。
+基于 Go 语言的极简内网服务器测速工具，测量服务器与浏览器或终端客户端之间的下载、上传速度和延迟。
 
 编译后是单个可执行文件，前端资源全部内嵌，**不依赖 CDN、不需要 Node.js**，内网和离线环境开箱即用。
 
@@ -86,24 +86,34 @@
 - **三种主题**：跟随系统 / 浅色 / 深色，切换时不闪白
 - **配置自动记忆**：测试项目、线程、单位、时长、当前视图都会保存在浏览器里，刷新后不会回到默认值
 - **自适应布局**：手机、平板、电脑都能正常使用
+- **版本标识**：网页版在底部链接区后显示版本，终端客户端在标题后显示本机程序版本
 
 ---
 
 ## 使用
 
-下载对应平台的可执行文件，运行即可：
+下载对应平台的发布包并解压，运行其中的可执行文件即可（以下示例将文件重命名为 `kuai-net`）：
 
 ```bash
 ./kuai-net
 ```
 
-Windows 下双击 `kuai-net.exe` 即可。启动后终端会输出监听地址，
-浏览器打开 `http://服务器IP:8080`。
+启动后终端会输出监听地址，浏览器打开 `http://服务器IP:8080`。
+
+| 平台 | 发布包 | 压缩 |
+|---|---|---|
+| Linux x64 | `kuai-net-linux-amd64.tar.gz` | UPX |
+| Linux ARM64 | `kuai-net-linux-arm64.tar.gz` | UPX |
+| Windows x64 | `kuai-net-windows-amd64.tar.gz` | UPX |
+| macOS Intel | `kuai-net-darwin-amd64.tar.gz` | 不使用 UPX |
+| macOS Apple 芯片 | `kuai-net-darwin-arm64.tar.gz` | 不使用 UPX |
+
+Windows 可直接双击 `.exe` 启动服务端；使用 TUI 时在 PowerShell / Windows Terminal 中运行 `./kuai-net-windows-amd64.exe c`。macOS 根据芯片选择对应文件，执行 `chmod +x` 后运行；首次运行可能需在「系统设置 → 隐私与安全性」中允许。
 
 ### Linux
 
 ```bash
-# 按架构选一个（uname -m 看：x86_64 → amd64，aarch64 → arm64）
+# uname -m：x86_64 选 linux-amd64；aarch64 选 linux-arm64
 chmod +x kuai-net-linux-amd64
 ./kuai-net-linux-amd64 -addr :8080
 ```
@@ -126,13 +136,69 @@ systemd 常驻、Nginx 反代、防火墙与线上测速注意事项见 [docs/de
 ./kuai-net -addr :9000 -max-duration 10
 ```
 
+### 终端客户端（TUI）
+
+同一个可执行文件支持服务端和客户端两种模式。无子命令时启动服务端；`client` 和 `c` 都会打开终端测速界面，适合 SSH、Alpine 和两台服务器之间测速。
+
+```bash
+# 机器 A：启动 HTTP 测速服务
+./kuainet -addr :8080
+
+# 机器 B：进入 TUI，两条命令等效
+./kuainet client
+./kuainet c
+```
+
+`kuainet` 是示例文件名；下载的文件名为 `kuai-net-linux-amd64` 时，运行 `./kuai-net-linux-amd64 c`。
+
+进入后首先通过纵向列表选择语言，提供与 Web 一致的 10 种语言，并高亮上次的选择。主界面使用统一配色，以标签对齐、带边框的紧凑表单显示当前配置。选项字段带 `▾` 标记：点击字段、按 Enter 或 Alt+↓，即可在字段下方展开选项列表；终端底部空间不足时自动调整展开位置。
+
+在“服务端”弹窗中填写 IP 和端口，默认端口为 `8080`；也支持域名、`IP:端口`、IPv6 和 HTTP(S) URL。地址中明确指定的端口优先；完整的 HTTPS URL 未指定端口时使用 HTTPS 默认端口 `443`。反向代理部署在子路径下时可以填写完整地址，例如 `https://speed.example.com/net`。
+
+测试项目下拉列表可多选延迟、下载、上传，点击或空格勾选后按 Enter 或点击确认按钮保存。并发数、时长、单位和语言使用单选下拉列表；鼠标点选直接保存，也可通过滚轮/上下键移动后按 Enter 确认。Esc 或点击列表外部取消修改并保留原值。支持鼠标事件的 SSH 终端可直接点击操作；不支持鼠标时仍可使用全部键盘操作。
+
+测速时通过 ntcharts Canvas 展示半圆仪表盘，并通过 ntcharts 折线图展示下载与上传曲线；同时显示阶段进度、流量和最终平均/峰值。表单和图表均限制最大宽度，避免宽屏下左右内容相隔过远。小终端会简化布局，建议至少 80×24，完整上下图表布局建议 80×30 以上。
+
+| 按键 | 操作 |
+|---|---|
+| `↑↓←→`、`j` / `k`、`Tab` / `Shift+Tab` | 按布局移动到配置项；下拉列表中用上下键选择 |
+| 点击字段 / `Enter` / `Alt+↓` | 展开下拉列表；服务端字段打开地址输入弹窗 |
+| 点击选项 / `Enter`（列表中） | 确认单选；历史表格中查看详情 |
+| 滚轮（列表中） | 移动当前高亮项，不立即保存 |
+| 点击 / `空格`（测试项目列表中） | 勾选/取消测试项，再 Enter 或点击确认保存 |
+| `Esc` / 点击列表外部 | 取消当前修改并收起列表 |
+| `h` / `l`（主界面） | 打开历史表格 / 语言列表 |
+| `c`（历史表格） | 清空历史，弹窗确认后生效 |
+| `Ctrl+R` | 开始或重新测速 |
+| `Esc` / `s` / `Enter`（测试中） | 停止并保留已采集结果 |
+| `Esc`（子页面） / `q` | 返回；主界面退出 |
+| `Ctrl+C` | 退出客户端 |
+
+下载和上传方向以**客户端所在机器**为准：下载为 A → B，上传为 B → A。延迟为 HTTP 往返耗时。客户端请求现有 `/api/ping`、`/api/download`、`/api/upload` 接口；上传以服务端返回的字节确认统计流量，内存中只复用固定大小的数据块。平均速度采用与 Web 一致的预热/收尾窗口，峰值采用中位数与滑窗滤波；过早停止导致采样不足时会明确显示“采样不足”。
+
+客户端需要交互式终端。配置与最近 60 条历史记录保存在客户端本机的 `$XDG_CONFIG_HOME/kuainet/client.json`，未设置 XDG_CONFIG_HOME 时为 `~/.config/kuainet/client.json`。历史表格支持滚动、选中后查看详情及曲线，详情包括测速时的目标、配置、传输量、峰值、取样区间和停止/失败状态；修改当前配置不会更改历史结果。文件以临时文件写入再原子替换，损坏的数据不会被自动覆盖。
+
 ### 从源码构建
 
-需要 Go 1.22 及以上。前端资源通过 `go:embed` 嵌入，构建产物是单个可执行文件。
+需要 Go 1.26 及以上。前端资源通过 `go:embed` 嵌入，构建产物是单个可执行文件。
 
 ```bash
 go build -o kuai-net .
 go test ./...
+
+# 构建 Linux / Windows / macOS 五个目标，要求已安装 UPX
+sh .cnb/scripts/release-build.sh
+sh .cnb/scripts/verify-artifacts.sh
+```
+
+发布产物在 `release/`，包括上表的五个平台归档、对应可执行文件和 `SHA256SUMS.txt`。Linux 和 Windows 必须通过 UPX 压缩与完整性检查；macOS 为避免 Mach-O 兼容性问题不使用 UPX。所有目标禁用 CGO，Linux 为静态链接。CNB 在推送 tag 时自动测试、构建并发布到 CNB 和 GitHub；校验失败会中断发布。
+
+发布脚本从 `VERSION`、CI 的 `CNB_BRANCH`（发布 tag）、`git describe --tags --always --dirty` 依次确定版本号，并注入同一可执行文件，供 Web 和 TUI 共用。本地未提交的构建带 `-dirty` 后缀；直接 `go build` 默认显示 `dev`。可以手动指定：
+
+```bash
+VERSION=v1.1.0 sh .cnb/scripts/release-build.sh
+# 或直接构建时注入版本
+go build -ldflags="-X main.version=v1.1.0" -o kuai-net .
 ```
 
 ---

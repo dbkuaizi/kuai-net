@@ -59,6 +59,7 @@ const I18N = {
     timeAxis: '时间（秒）', secondsAxis: '秒',
     stopping: '正在停止…', probe: '探测',
     saveFailed: '（本地记录保存失败）',
+    version: '版本',
     creditAuthor: '作者'
   },
   en: {
@@ -101,6 +102,7 @@ const I18N = {
     timeAxis: 'Time (s)', secondsAxis: 's',
     stopping: 'Stopping…', probe: 'Ping',
     saveFailed: ' (failed to save local record)',
+    version: 'Version',
     creditAuthor: 'Author'
   },
   'zh-Hant': {
@@ -143,6 +145,7 @@ const I18N = {
     timeAxis: '時間（秒）', secondsAxis: '秒',
     stopping: '正在停止…', probe: '探測',
     saveFailed: '（本機記錄儲存失敗）',
+    version: '版本',
     creditAuthor: '作者'
   },
   ja: {
@@ -185,6 +188,7 @@ const I18N = {
     timeAxis: '時間（秒）', secondsAxis: '秒',
     stopping: '停止しています…', probe: '計測',
     saveFailed: '（ローカル履歴の保存に失敗しました）',
+    version: 'バージョン',
     creditAuthor: '作者'
   },
   ko: {
@@ -227,6 +231,7 @@ const I18N = {
     timeAxis: '시간(초)', secondsAxis: '초',
     stopping: '중지하는 중…', probe: '핑',
     saveFailed: ' (로컬 기록 저장 실패)',
+    version: '버전',
     creditAuthor: '제작자'
   },
   de: {
@@ -269,6 +274,7 @@ const I18N = {
     timeAxis: 'Zeit (s)', secondsAxis: 's',
     stopping: 'Wird gestoppt…', probe: 'Ping',
     saveFailed: ' (lokales Speichern fehlgeschlagen)',
+    version: 'Version',
     creditAuthor: 'Autor'
   },
   fr: {
@@ -311,6 +317,7 @@ const I18N = {
     timeAxis: 'Temps (s)', secondsAxis: 's',
     stopping: 'Arrêt en cours…', probe: 'Ping',
     saveFailed: " (échec de l'enregistrement local)",
+    version: 'Version',
     creditAuthor: 'Auteur'
   },
   es: {
@@ -353,6 +360,7 @@ const I18N = {
     timeAxis: 'Tiempo (s)', secondsAxis: 's',
     stopping: 'Deteniendo…', probe: 'Ping',
     saveFailed: ' (no se pudo guardar el registro local)',
+    version: 'Versión',
     creditAuthor: 'Autor'
   },
   'pt-BR': {
@@ -395,6 +403,7 @@ const I18N = {
     timeAxis: 'Tempo (s)', secondsAxis: 's',
     stopping: 'Parando…', probe: 'Ping',
     saveFailed: ' (falha ao salvar o registro local)',
+    version: 'Versão',
     creditAuthor: 'Autor'
   },
   ru: {
@@ -437,6 +446,7 @@ const I18N = {
     timeAxis: 'Время (с)', secondsAxis: 'с',
     stopping: 'Остановка…', probe: 'Пинг',
     saveFailed: ' (не удалось сохранить локальную запись)',
+    version: 'Версия',
     creditAuthor: 'Автор'
   }
 };

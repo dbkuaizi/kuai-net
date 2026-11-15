@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"embed"
 	"flag"
@@ -8,7 +9,9 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -23,24 +26,57 @@ var (
 )
 
 func main() {
-	flag.Parse()
+	if err := runCommand(os.Args[1:]); err != nil && err != flag.ErrHelp {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+}
+
+func runCommand(args []string) error {
+	if len(args) > 0 && (args[0] == "client" || args[0] == "c") {
+		flags := flag.NewFlagSet("kuainet "+args[0], flag.ContinueOnError)
+		flags.Usage = func() {
+			fmt.Fprintln(flags.Output(), "用法：kuainet client（或 kuainet c）\n打开终端测速客户端，在界面中输入服务端 IP 和端口并选择配置。")
+		}
+		if err := flags.Parse(args[1:]); err != nil {
+			return err
+		}
+		if flags.NArg() != 0 {
+			return fmt.Errorf("请在 TUI 界面中填写服务端地址；用法：kuainet %s", args[0])
+		}
+		return runClientTUI()
+	}
+	if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
+		return fmt.Errorf("未知子命令 %q；使用 kuainet 启动服务端，kuainet client（或 c）启动客户端", args[0])
+	}
+	flag.CommandLine.Usage = func() {
+		fmt.Fprintln(flag.CommandLine.Output(), "用法：kuainet [服务端参数]\n      kuainet client | c\n\n无子命令时启动 HTTP 测速服务；client / c 打开 TUI 客户端。\n\n服务端参数：")
+		flag.PrintDefaults()
+	}
+	if err := flag.CommandLine.Parse(args); err != nil {
+		return err
+	}
+	if flag.NArg() != 0 {
+		return fmt.Errorf("服务端参数无效；使用 kuainet -h 查看帮助")
+	}
 	if *maxDuration < 1 {
-		log.Fatal("max-duration must be positive")
+		return fmt.Errorf("max-duration must be positive")
 	}
 	mux := newMux()
 	server := &http.Server{Addr: *addr, Handler: securityHeaders(mux), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 70 * time.Second, WriteTimeout: 70 * time.Second}
 	log.Printf("netest listening on http://%s", *addr)
-	log.Fatal(server.ListenAndServe())
+	return server.ListenAndServe()
 }
 
 func newMux() *http.ServeMux {
+	index := renderIndex()
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/ping", ping)
 	mux.HandleFunc("/api/download", download)
 	mux.HandleFunc("/api/upload", upload)
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/" {
-			http.ServeFileFS(w, r, assets, "static/index.html")
+		if r.URL.Path == "/" || r.URL.Path == "/static/" || r.URL.Path == "/static/index.html" {
+			http.ServeContent(w, r, "index.html", time.Time{}, bytes.NewReader(index))
 			return
 		}
 		http.FileServer(http.FS(assets)).ServeHTTP(w, r)

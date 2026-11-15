@@ -5,16 +5,15 @@
 | 文件 | 架构 | 用于 |
 |---|---|---|
 | `kuai-net-linux-amd64` | x86-64 | 绝大多数云服务器、VPS |
-| `kuai-net-linux-arm64` | ARM64 | 阿里云/华为云 ARM 实例、树莓派 4/5、部分 NAS |
+| `kuai-net-linux-arm64` | ARM64 | ARM 云服务器、64 位 ARM 设备 |
 
-两个都是**静态链接**的单文件，不依赖 glibc，Alpine / Debian / Ubuntu / CentOS 都能直接跑。
+Linux 两个架构均为 UPX 压缩的**静态链接**单文件，不依赖 glibc，Alpine / Debian / Ubuntu / CentOS 都能直接跑。Windows 和 macOS 发布包参见 README。
 
-不确定自己的机器是哪种：
+确认机器架构：
 
 ```bash
 uname -m
-# x86_64        → 用 amd64
-# aarch64/arm64 → 用 arm64
+# x86_64 → linux-amd64；aarch64 → linux-arm64
 ```
 
 ## 上传
@@ -32,6 +31,8 @@ chmod +x /opt/kuai-net
 ```
 
 浏览器访问 `http://服务器IP:8080`。
+
+另一台 Linux 机器也可以运行对应架构的 `/opt/kuai-net c`（或 `client`）进入 TUI：先选语言，再点击或按 Enter 展开测速配置字段、填写服务端地址。历史记录和配置保存在运行客户端的机器上。
 
 ### 放后台常驻
 
